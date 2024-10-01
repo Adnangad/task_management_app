@@ -110,6 +110,12 @@ button {
   border-radius: 5px;
   cursor: pointer;
 }
+.completed button:hover {
+  background-color: #c96d05;
+}
+.incomplete button:hover {
+  background-color: #10be13;
+}
 
 button.delete-btn {
   background-color: #f80b0b;
