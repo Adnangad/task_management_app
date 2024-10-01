@@ -150,3 +150,41 @@ def delete_task(request):
             return JsonResponse({'error': 'Session expired, please log in to continue'}, status=401)
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def updateAccount(request):
+    """Updates a users account"""
+    if request.method == 'PUT':
+        token = request.headers['X-Token']
+        mail = cache.get(f'auth_{token}')
+        if mail:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+                username = data.get('username')
+                user = Users.objects.get(email=mail)
+                if len(username) > 1:
+                    user.username = username
+                    user.save()
+                return JsonResponse({'message': 'Success'}, status=200)
+            except Exception as e:
+                print(f'Error is {e}')
+                return JsonResponse({'error': f'{e}'}, status=409)
+        return JsonResponse({'error': 'Session expired, please log in to continue'}, status=401)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def getUser(request):
+    """Gets user details"""
+    if request.method == 'GET':
+        token = request.headers['X-Token']
+        email = cache.get(f'auth_{token}')
+        if email:
+            try:
+                user = Users.objects.filter(email=email).first()
+                user = model_to_dict(user)
+                return JsonResponse({'user': user}, status=200, safe=False)
+            except Exception as e:
+                return JsonResponse({'error': f'{e}'}, status=409)
+        else:
+            return JsonResponse({'error': 'Session expired, please log in to continue'}, status=401)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)

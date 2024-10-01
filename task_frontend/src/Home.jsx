@@ -3,13 +3,16 @@ import { useNavigate, Link } from "react-router-dom";
 import './Home.css';
 import headerImage from '../src/assets/images/header.jpeg';
 import { useSpring, animated } from 'react-spring';
+import Popup from 'reactjs-popup';
 
 function Home() {
     const token = sessionStorage.getItem('token');
     const [tasks, setTasks] = useState([]);
+    const [user, setUser] = useState([]);
     const [createdTask, setCreate] = useState("");
     const [message, setMessage] = useState("");
     const [errorMessage, setError] = useState("");
+    const [username, setUserName] = useState();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -36,7 +39,31 @@ function Home() {
                 setError('Unable to fetch tasks at this time');
             }
         };
+        const getUser = async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/getUser', {
+                    method: "GET",
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Token': token
+                    }
+                });
+
+                if (response.status === 200) {
+                    const data = await response.json();
+                    setUser(data.user);
+                } else if (response.status === 401) {
+                    alert('Session expired. Redirecting to login.');
+                    navigate('/login');
+                } else {
+                    setError('Failed to fetch tasks');
+                }
+            } catch (error) {
+                setError('Unable to fetch user details at this time');
+            }
+        };
         getTasks();
+        getUser();
     }, [token, navigate]);
 
     const createATask = async (e) => {
@@ -105,14 +132,80 @@ function Home() {
             alert(error);
         }
     };
+    const updateUser = async () => {
+        try {
+            const bod = {
+                username: username,
+            }
+            const response = await fetch('http://127.0.0.1:8000/updateUser', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-Token': token },
+                body: JSON.stringify(bod)
+            });
+            const data = await response.json();
+            if (response.status == 200) {
+                setMessage(data.message);
+            }
+            else {
+                setError(data.error);
+            }
+        } catch (error) {
+            setError('Unable to update account details');
+            return;
+        }
+    }
 
     return (
         <>
             <header className="header">
                 <h2>Task Management</h2>
-                <Link className="account" to="/account">Account</Link>
+                <Popup
+                    trigger={<a href="#" className="account">Account</a>}
+                    modal
+                    contentStyle={{
+                        width: '300px',
+                        padding: '20px',
+                        backgroundColor: '#f1f1f1',
+                        textAlign: 'center',
+                        position: 'fixed',
+                        top: '0',
+                        left: '0',
+                        right: '0',
+                        width: '500px',
+                        bottom: '0',
+                        margin: 'auto',
+                        zIndex: '1001',
+                        borderRadius: '10px',
+                    }}
+                    overlayStyle={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        position: 'fixed',
+                        top: '0',
+                        left: '0',
+                        right: '0',
+                        bottom: '0',
+                        zIndex: '1000',
+                    }}
+                ><div className="popup">
+                        <h3>Manage account</h3>
+                        <form onSubmit={updateUser}>
+                            <label htmlFor="username">Username:</label><br />
+                            <input
+                                type="text"
+                                required
+                                placeholder="Update username"
+                                value={username}
+                                onChange={(e) => setUserName(e.target.value)}
+                            /><br />
+                            <button type="submit">Update username</button>
+                        </form>
+                    </div>
+                    {errorMessage ? <p className="error-message">{errorMessage}</p> : <div className="details">
+                        <p>Email: {user.email}</p>
+                        <p>Username: {user.username}</p>
+                    </div>}
+                </Popup>
             </header>
-
             <div className="container">
                 <div className="create-task">
                     <h3>Create a Task</h3>
